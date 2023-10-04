@@ -140,15 +140,3 @@ def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, out
           f"Saved to:\n"
           f"Sequences: {seqsOut}\n"
           f"Metadata: {mdataOut}\n")
-
-seqDataPath = "\\\\healthy.bewell.ca\\Apps\\APL_Genomics\\apps\\development\\nextstrain\\ncov\\BNexport"
-patientDataDir = "\\\\healthy.bewell.ca\\FHE\\PRL\Groups\\ProvincialSurveillance\\COVID-19"
-routineSeqDB = "\\\\healthy.bewell.ca\\Apps\\APL\\Genomics_DEV\\projects\\data_management\\flatFileDBs\\routineSeqDB_2023-09-07_fasta_windows_path.txt"
-
-output = os.path.join("\\\\healthy.bewell.ca\\Apps\\APL_Genomics\\apps\\development\\nextstrain\\ncov\\DB\\", str(date.today().strftime("%y%m%d"))+"_ncov")
-os.mkdir(output)
-
-generateCOVIDdatabase(seqDataPath = seqDataPath,
-                      patientDataDir = patientDataDir,
-                      dbPath = routineSeqDB,
-                      output = output)
