@@ -1,6 +1,5 @@
-import pandas as pd, timeit, os, shutil, sys, re, os, searchTools as st
+import pandas as pd, os, shutil, re, os, searchTools as st
 from pathlib import Path
-from datetime import datetime, date
 from alive_progress import alive_bar
 
 os.chdir(os.path.dirname(__file__))
@@ -12,26 +11,24 @@ def collateCOVIDdata(seqData: pd.DataFrame, patientData: pd.DataFrame, matchCol:
     :param matchCol: The column to match the data on
     :return: A collated DataFrame
     """    
-    # Subset the metadata
     accessions = seqData[matchCol].values.tolist()
     metadata = patientData[patientData[matchCol].isin(accessions)]
     seqData.drop_duplicates(subset=[matchCol], inplace=True)
     metadata.drop_duplicates(subset=[matchCol], inplace=True)
-
-    # Align the metadata
     seqData = seqData.merge(metadata, on = matchCol)
-
     return seqData
 
 def getPatientMetadata(patientDataDir:str, captureCols:str, renameCols:dict = None, verbose = True):
     """Retrieves patient metadata 
     :param patientDataDir: Path to the customer tab data
-    :param regex: The regex to select files for
     :param captureCols: Columns to capture for the customer tab data
     :param renameCols: Mapper to rename columns
+    :param verbose: Be chatty
     :return: DataFrame with combined and subsetted data
     """    
     if verbose: print("\nRetrieving patient metadata...")
+    if not os.path.isdir(patientDataDir): raise FileNotFoundError(f"Directory does not exist: {patientDataDir}")
+
     patientDataFiles = st.generateFlatFileDB(dir = patientDataDir)
     patientDataFiles = st.searchFlatFileDB(patientDataFiles, searchTerms="lab_covid19_cust_tab_output")  
     
@@ -53,6 +50,8 @@ def getSeqData(seqDataPath:str, onlyQCpass:bool = True, verbose = True):
     :return: DataFrame with sequencing data
     """    
     if verbose: print(f"\nRetrieving sequencing data...")
+    if not os.path.isdir(seqDataPath): raise FileNotFoundError(f"Directory does not exist: {seqDataPath}")
+    
     seqDataFiles = st.generateFlatFileDB(seqDataPath)  
     
     seqData = []
@@ -62,7 +61,10 @@ def getSeqData(seqDataPath:str, onlyQCpass:bool = True, verbose = True):
         
     if verbose: print(f"Collating sequencing metadata...")
     seqData = pd.concat(seqData, ignore_index=True)
-    if "qc_pass" in seqData.columns and onlyQCpass: seqData = seqData.loc[(seqData["qc_pass"] == "PASS") | (seqData["qc_pass"] == "TRUE")]
+    if (onlyQCpass):
+        if "qc_pass" not in seqData.columns: 
+            raise KeyError("onlyQCpass is True, but column 'qc_pass' does not exist in the seqData.")
+        seqData = seqData.loc[(seqData["qc_pass"] == "PASS") | (seqData["qc_pass"] == "TRUE")]
     return seqData
 
 def addFASTApaths(seqData:pd.DataFrame, dbPath:str, verbose = True):
@@ -111,7 +113,7 @@ def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, out
     :param output: The output CSV
     """    
     seqData = getSeqData(seqDataPath = seqDataPath,
-                         verbose = verbose).sample(1000)
+                         verbose = verbose)
 
     fastaData = addFASTApaths(seqData = seqData, 
                             dbPath = dbPath, 
@@ -122,6 +124,7 @@ def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, out
                                      renameCols = {"SPEC_NUMBER_LN1": "accession_number"},
                                      verbose = verbose)
 
+    Path.mkdir(output, parents=True, exist_ok=True)
     mdataOut = os.path.join(output,"metadata.tsv")
     mdata = collateCOVIDdata(seqData = fastaData, patientData = patientData, matchCol = "accession_number")
     print("\nGenerating metadata.tsv...")
