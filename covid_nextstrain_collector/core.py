@@ -1,8 +1,7 @@
-import pandas as pd, os, shutil, re, os, searchTools as st
+import pandas as pd, os, shutil, re, os
+import covid_nextstrain_collector.searchTools as st
 from pathlib import Path
 from alive_progress import alive_bar
-
-os.chdir(os.path.dirname(__file__))
 
 def collateCOVIDdata(seqData: pd.DataFrame, patientData: pd.DataFrame, matchCol:str = None):
     """Collates COVID sequencing data and metadata. Will drop duplicate samples based on the matchCol.

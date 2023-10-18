@@ -26,3 +26,6 @@ def main():
                       patientDataDir = config["patientDataDir"],
                       dbPath = config["routineSeqDB"],
                       output = args.output)
+    
+if __name__ == '__main__':
+    main()
