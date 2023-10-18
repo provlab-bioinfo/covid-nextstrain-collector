@@ -1,5 +1,7 @@
 {
     "seqDataPath": "/path/to/BNexport",
     "patientDataDir": "/path/to/metadata",
-    "routineSeqDB": "/path/to/database"
+    "routineSeqDB": "/path/to/database",
+    "captureCols": {"input_column1":"output_column1",
+                    "input_column2":"output_column2"}
 }

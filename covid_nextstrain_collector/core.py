@@ -17,10 +17,10 @@ def collateCOVIDdata(seqData: pd.DataFrame, patientData: pd.DataFrame, matchCol:
     seqData = seqData.merge(metadata, on = matchCol)
     return seqData
 
-def getPatientMetadata(patientDataDir:str, captureCols:str, renameCols:dict = None, verbose = True):
+def getPatientMetadata(patientDataDir:str, cols: dict, verbose = True):
     """Retrieves patient metadata 
     :param patientDataDir: Path to the customer tab data
-    :param captureCols: Columns to capture for the customer tab data
+    :param cols: Columns to capture & rename
     :param renameCols: Mapper to rename columns
     :param verbose: Be chatty
     :return: DataFrame with combined and subsetted data
@@ -34,16 +34,21 @@ def getPatientMetadata(patientDataDir:str, captureCols:str, renameCols:dict = No
     metadata = []
     for file in patientDataFiles:
         if verbose: print(f"   Reading: {Path(file).stem}")
-        metadata.append(st.importToDataFrame(file, index_col=False, low_memory=True, encoding_errors='replace', dtype="str", usecols=captureCols))
+        metadata.append(st.importToDataFrame(file, index_col=False, low_memory=True, encoding_errors='replace', 
+                                             dtype="str", on_bad_lines='skip',
+                                             usecols = lambda col: col in list(cols.values()) + list(cols.keys())))
 
     if verbose: print(f"Collating patient metadata...")
     metadata = pd.concat(metadata, ignore_index=True)
-    if renameCols is not None: metadata.rename(columns=renameCols, inplace=True)
+    metadata = metadata.rename(columns = cols)
+    metadata = metadata[metadata.columns.intersection(list(cols.values()))]
     return metadata
 
-def getSeqData(seqDataPath:str, onlyQCpass:bool = True, verbose = True):
+def getSeqData(seqDataPath:str, dbPath: str, cols: dict, onlyQCpass:bool = True, verbose = True):
     """Retrieves BNexport files. 
     :param seqDataPath: Path to the BNexport directory. Can be any format of: .tsv, .csv, or .xlsx.
+    :param dbPath: Path to flat file database
+    :param cols: Columns to capture & rename
     :param onlyQCpass: Subset to only QC passing samples. Column 'qc_pass' must exist.
     :param verbose: Be chatty
     :return: DataFrame with sequencing data
@@ -56,7 +61,9 @@ def getSeqData(seqDataPath:str, onlyQCpass:bool = True, verbose = True):
     seqData = []
     for file in seqDataFiles:
         if verbose: print(f"   Reading: {Path(file).stem}")
-        seqData.append(st.importToDataFrame(file, index_col=False, low_memory=True, encoding_errors='replace', dtype="str"))
+        seqData.append(st.importToDataFrame(file, index_col=False, low_memory=True, encoding_errors='replace', 
+                                             dtype="str", on_bad_lines='skip',
+                                             usecols = lambda col: col in list(cols.values()) + list(cols.keys())))
         
     if verbose: print(f"Collating sequencing metadata...")
     seqData = pd.concat(seqData, ignore_index=True)
@@ -64,6 +71,11 @@ def getSeqData(seqDataPath:str, onlyQCpass:bool = True, verbose = True):
         if "qc_pass" not in seqData.columns: 
             raise KeyError("onlyQCpass is True, but column 'qc_pass' does not exist in the seqData.")
         seqData = seqData.loc[(seqData["qc_pass"] == "PASS") | (seqData["qc_pass"] == "TRUE")]
+
+    seqData = addFASTApaths(seqData, dbPath)    
+    seqData = seqData.rename(columns = cols)
+    seqData = seqData[seqData.columns.intersection(list(cols.values()))]
+
     return seqData
 
 def addFASTApaths(seqData:pd.DataFrame, dbPath:str, verbose = True):
@@ -109,27 +121,33 @@ def writeSequences(outFile: str, seqData: pd.DataFrame, stripMetadata = True, ve
                     pass
                 bar()
 
-def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, output:str, verbose: bool = True):
+def renameAndSubsetDF(df:pd.DataFrame, cols: dict):
+    """Renames columns in a DataFrame and discards columns not in the list
+    :param seqDataPath: Path to the BioNumerics Export file
+    :param patientDataDir: Path to the customer tab data
+    :param output: The output CSV
+    """    
+    df = df.rename(columns = cols)
+    df = df[df.columns.intersection(list(cols.values()))]
+    return df
+def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, captureCols: dict, output:str, verbose: bool = True):
     """Generates a collated COVID database. Includes all sequencing data, as well as metadata for patient age, gender and region.
     :param seqDataPath: Path to the BioNumerics Export file
     :param patientDataDir: Path to the customer tab data
     :param output: The output CSV
     """    
-    seqData = getSeqData(seqDataPath = seqDataPath,
+    seqData = getSeqData(seqDataPath = seqDataPath,    
+                         dbPath = dbPath, 
+                         cols = captureCols,                
                          verbose = verbose)
 
-    fastaData = addFASTApaths(seqData = seqData, 
-                            dbPath = dbPath, 
-                            verbose = verbose)
-
     patientData = getPatientMetadata(patientDataDir = patientDataDir,
-                                     captureCols = ["SPEC_NUMBER_LN1","SPEC_PAT_NUM_AGE","PATIENT_GENDER","REGION_SUM"],
-                                     renameCols = {"SPEC_NUMBER_LN1": "accession_number"},
+                                     cols = captureCols, 
                                      verbose = verbose)
 
     Path(output).mkdir(parents=True, exist_ok=True)
     mdataOut = os.path.join(output,"metadata.tsv")
-    mdata = collateCOVIDdata(seqData = fastaData, patientData = patientData, matchCol = "accession_number")
+    mdata = collateCOVIDdata(seqData = seqData, patientData = patientData, matchCol = "Accession")
     print("\nGenerating metadata.tsv...")
     mdata.to_csv(mdataOut, sep="\t", index=False)
 

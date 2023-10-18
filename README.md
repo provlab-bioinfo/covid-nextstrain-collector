@@ -61,7 +61,8 @@ These three paths are necessary for collection:
 
 - **Sequencing data** (```seqDataPath```): The folder containing the exports from the BioNumerics database. 
 - **Patient metadata** (```patientDataDir```): The folder containing the aggregated patient metadata from all COVID samples. 
-- **Routine seq database:** (```routineSeqDB```) A text file containing a list of all files from which to search for FASTA files corresponding to each sample.
+- **Routine seq database:** (```routineSeqDB```): A text file containing a list of all files from which to search for FASTA files corresponding to each sample.
+- **Captured columns:** (```"captureCols"```): A dictionary structure of columns to capture and rename. Must be in a mapper structure like {"input_column":"output_column"}
 
 ## Output
 

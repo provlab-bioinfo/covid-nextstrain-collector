@@ -25,6 +25,7 @@ def main():
     core.generateCOVIDdatabase(seqDataPath = config["seqDataPath"],
                       patientDataDir = config["patientDataDir"],
                       dbPath = config["routineSeqDB"],
+                      captureCols = config["captureCols"],
                       output = args.output)
     
 if __name__ == '__main__':
