@@ -82,6 +82,7 @@ def addFASTApaths(seqData:pd.DataFrame, dbPath:str, verbose = True):
     weights = fastas['fasta'].transform(lambda path: 1000000000 if bool(re.search('consensus', path)) else 1)
     fastas = fastas.groupby('fasta').sample(weights = weights.tolist()).reset_index()
     seqData = seqData.merge(fastas,how="right",on="fasta")
+    # seqData = seqData[seqData["fastaPath"].apply(os.path.isfile)]
     return seqData
 
 def writeSequences(outFile: str, seqData: pd.DataFrame, stripMetadata = True, verbose = True) -> None:
@@ -97,12 +98,15 @@ def writeSequences(outFile: str, seqData: pd.DataFrame, stripMetadata = True, ve
         with open(outFile,'wb') as out:
             for rowIdx in seqData.index:
                 row = seqData.loc[rowIdx]
-                with open(row['fastaPath'],"rb") as f:
-                    if stripMetadata:
-                        header = f.readline()
-                        header = row['Key']
-                        out.write(str.encode(">" + header + "\n"))
-                    shutil.copyfileobj(f, out)
+                try:
+                    with open(row['fastaPath'],"rb") as f:
+                        if stripMetadata:
+                            header = f.readline()
+                            header = row['Key']
+                            out.write(str.encode(">" + header + "\n"))
+                        shutil.copyfileobj(f, out)
+                except FileNotFoundError:
+                    pass
                 bar()
 
 def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, output:str, verbose: bool = True):
@@ -123,7 +127,7 @@ def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, out
                                      renameCols = {"SPEC_NUMBER_LN1": "accession_number"},
                                      verbose = verbose)
 
-    Path.mkdir(output, parents=True, exist_ok=True)
+    Path(output).mkdir(parents=True, exist_ok=True)
     mdataOut = os.path.join(output,"metadata.tsv")
     mdata = collateCOVIDdata(seqData = fastaData, patientData = patientData, matchCol = "accession_number")
     print("\nGenerating metadata.tsv...")
