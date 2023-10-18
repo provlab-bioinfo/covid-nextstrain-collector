@@ -114,7 +114,7 @@ def writeSequences(outFile: str, seqData: pd.DataFrame, stripMetadata = True, ve
                     with open(row['fastaPath'],"rb") as f:
                         if stripMetadata:
                             header = f.readline()
-                            header = row['Key']
+                            header = row['strain']
                             out.write(str.encode(">" + header + "\n"))
                         shutil.copyfileobj(f, out)
                 except FileNotFoundError:
@@ -130,6 +130,13 @@ def renameAndSubsetDF(df:pd.DataFrame, cols: dict):
     df = df.rename(columns = cols)
     df = df[df.columns.intersection(list(cols.values()))]
     return df
+
+def convertDates(df: pd.DataFrame):
+    dateCols = [col for col in df.columns if 'date' in col.lower()]
+    for col in dateCols:
+        df[col] = pd.to_datetime(df[col],errors='coerce',dayfirst=False).dt.strftime('%Y-%m-%d')
+    return df
+
 def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, captureCols: dict, output:str, verbose: bool = True):
     """Generates a collated COVID database. Includes all sequencing data, as well as metadata for patient age, gender and region.
     :param seqDataPath: Path to the BioNumerics Export file
@@ -148,16 +155,15 @@ def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, cap
     Path(output).mkdir(parents=True, exist_ok=True)
     mdataOut = os.path.join(output,"metadata.tsv")
     mdata = collateCOVIDdata(seqData = seqData, patientData = patientData, matchCol = "Accession")
+    mdata = convertDates(mdata)
     print("\nGenerating metadata.tsv...")
     mdata.to_csv(mdataOut, sep="\t", index=False)
-
     seqsOut = os.path.join(output,"sequences.fasta")
     writeSequences(seqData = mdata, outFile = seqsOut)
 
     print(f"\nAuspice output generated!\n"
           f"-------------------------\n"
           f"Found {len(seqData)} sequences\n"
-          f"Matched {len(fastaData)} FASTAs files\n"
           f"Found {len(patientData)} patient metadata entries\n"
           f"Matched {len(mdata)} sequences to metadata\n"
           f"-------------------------\n"
