@@ -1,5 +1,5 @@
 # covid-nextstrain-collector
- [![Lifecycle: WIP](https://img.shields.io/badge/lifecycle-WIP-yellow.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental) [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/CompEpigen/scMethrix/issues) [![License: GPL3](https://img.shields.io/badge/license-GPL3-lightgrey.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html) [![minimal Python version: 3.10](https://img.shields.io/badge/Python-3.10-6666ff.svg)](https://www.r-project.org/) [![Package Version = 0.0.1](https://img.shields.io/badge/Package%20version-0.0.1-orange.svg?style=flat-square)](https://github.com/provlab-bioinfo/covid-nextstrain-collector/blob/main/NEWS) [![Last-changedate](https://img.shields.io/badge/last%20change-2023--10--25-yellowgreen.svg)](https://github.com/provlab-bioinfo/covid-nextstrain-collector/blob/main/NEWS)
+ [![Lifecycle: WIP](https://img.shields.io/badge/lifecycle-WIP-yellow.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental) [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/CompEpigen/scMethrix/issues) [![License: GPL3](https://img.shields.io/badge/license-GPL3-lightgrey.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html) [![minimal Python version: 3.10](https://img.shields.io/badge/Python-3.10-6666ff.svg)](https://www.r-project.org/) [![Package Version = 0.0.1](https://img.shields.io/badge/Package%20version-0.0.1-orange.svg?style=flat-square)](https://github.com/provlab-bioinfo/covid-nextstrain-collector/blob/main/NEWS) [![Last-changedate](https://img.shields.io/badge/last%20change-2023--10--18-yellowgreen.svg)](https://github.com/provlab-bioinfo/covid-nextstrain-collector/blob/main/NEWS)
 
 <!-- [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FCompEpigen%2FscMethrix&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com) -->
 <!--[![R-CMD-check](https://github.com/CompEpigen/scMethrix/workflows/R-CMD-check/badge.svg)](https://github.com/CompEpigen/scMethrix/actions) -->
@@ -29,7 +29,7 @@ covid-nextstrain-collector.py --config /path/to/config --output /path/to/output
 
 ## Dependencies
 
-See [REQUIREMENTS.txt](REQUIREMENTS.txt) for package dependancies.
+See [```REQUIREMENTS.txt```](REQUIREMENTS.txt) for package dependancies.
 
 ## Installation
 
@@ -46,7 +46,7 @@ From the top-level of this repo, use pip to install the app module:
 pip install .
 ```
 
-## Config
+## Input
 
 A config template is provided in the repo. The config file should look like this:
 ```json
@@ -57,19 +57,17 @@ A config template is provided in the repo. The config file should look like this
 }
 ```
 
-## Input
+These three paths are necessary for collection:
 
-Three paths are necessary for collection:
-
-- **Sequencing data:** The folder containing the exports from the BioNumerics database. These are generated during each sequencing run, and should be stored in ```/APL_Genomics/virus_covid19/routineSeq/run/BNexport/```.
-- **Patient metadata:** The folder containing the aggregated patient metadata from all COVID samples. These should be stored in ```/Groups/ProvincialSurveillance/COVID-19/``` and should have the term ```lab_covid19_cust_tab_output``` included in the filename.
-- **Routine seq database:** A text file containing a list of all files present in ```/routineSeq/```. This is used for finding the corresponding FASTA files for each sample.
+- **Sequencing data** (```seqDataPath```): The folder containing the exports from the BioNumerics database. 
+- **Patient metadata** (```patientDataDir```): The folder containing the aggregated patient metadata from all COVID samples. 
+- **Routine seq database:** (```routineSeqDB```) A text file containing a list of all files from which to search for FASTA files corresponding to each sample.
 
 ## Output
 
-Two files are generated and can be placed into the Nextstrain ```/data/``` folder for generating the Nextstrain instance:
-- **sequences.fasta:** A multi-fasta file containing all fasta sequences for the inputted samples. The fasta headers match the ```strain``` column in ```metadata.tsv```.
-- **metadata.tsv:** The collated data for the SARS-CoV-2 analysis and patient metadata. This contains the minimum columns necessary for Nextstrain generation (```strain```, ```date``` in YYYY-MM-DD).
+Two files are generated and can be placed into the Auspice ```/data/``` folder for generating the Nextstrain instance:
+- **sequences.fasta:** A multi-FASTA file containing all FASTA sequences for the inputted samples. The FASTA headers match the ```strain``` column in ```metadata.tsv```.
+- **metadata.tsv:** The collated data for the SARS-CoV-2 analysis and patient metadata. This contains the minimum columns necessary for Nextstrain generation: ```strain``` and ```date``` (```YYYY-MM-DD```).
 
 ## References
 
