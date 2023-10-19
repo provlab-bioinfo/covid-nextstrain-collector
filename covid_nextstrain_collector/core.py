@@ -2,6 +2,7 @@ import pandas as pd, os, shutil, re, os
 import covid_nextstrain_collector.searchTools as st
 from pathlib import Path
 from alive_progress import alive_bar
+import datetime
 
 def collateCOVIDdata(seqData: pd.DataFrame, patientData: pd.DataFrame, matchCol:str = None):
     """Collates COVID sequencing data and metadata. Will drop duplicate samples based on the matchCol.
@@ -51,12 +52,11 @@ def getPatientMetadata(patientDataDir:str, cols: dict, verbose = True):
 
     return metadata
 
-def getSeqData(seqDataPath:str, dbPath: str, cols: dict, onlyQCpass:bool = True, verbose = True):
+def getSeqData(seqDataPath:str, dbPath: str, cols: dict, verbose = True):
     """Retrieves BNexport files. 
     :param seqDataPath: Path to the BNexport directory. Can be any format of: .tsv, .csv, or .xlsx.
     :param dbPath: Path to flat file database
     :param cols: Columns to capture & rename
-    :param onlyQCpass: Subset to only QC passing samples. Column 'qc_pass' must exist.
     :param verbose: Be chatty
     :return: DataFrame with sequencing data
     """    
@@ -74,10 +74,6 @@ def getSeqData(seqDataPath:str, dbPath: str, cols: dict, onlyQCpass:bool = True,
         
     if verbose: print(f"Collating sequencing metadata...")
     seqData = pd.concat(seqData, ignore_index=True)
-    if (onlyQCpass):
-        if "qc_pass" not in seqData.columns: 
-            raise KeyError("onlyQCpass is True, but column 'qc_pass' does not exist in the seqData.")
-        seqData = seqData.loc[(seqData["qc_pass"] == "PASS") | (seqData["qc_pass"] == "TRUE")]
 
     seqData = addFASTApaths(seqData, dbPath)    
     seqData = seqData.rename(columns = cols)
@@ -138,6 +134,32 @@ def renameAndSubsetDF(df:pd.DataFrame, cols: dict):
     df = df[df.columns.intersection(list(cols.values()))]
     return df
 
+def year_fraction(date):
+    try:
+        start = datetime.date(int(date.year), 1, 1).toordinal()
+        year_length = datetime.date(date.year+1, 1, 1).toordinal() - start
+        date = date.year + float(date.toordinal() - start) / year_length
+    except:
+        pass
+    
+    return date
+
+def year_fraction(date):
+    try:
+        start = datetime.date(int(date.year), 1, 1).toordinal()
+        year_length = datetime.date(date.year+1, 1, 1).toordinal() - start
+        return date.year + float(date.toordinal() - start) / year_length
+    except:
+        return date
+
+def convertDecimalDates(df: pd.DataFrame):
+    dateCols = [col for col in df.columns if 'date' in col.lower()]
+    for col in dateCols:
+        # df[col] = pd.to_datetime(df[col],errors='coerce',dayfirst=False).dt.strftime('%Y-%m-%d')
+        df[col] = pd.to_datetime(df[col],errors='coerce',dayfirst=False)
+        df[col] = df[col].apply(lambda x: year_fraction(x))
+    return df
+
 def convertDates(df: pd.DataFrame):
     dateCols = [col for col in df.columns if 'date' in col.lower()]
     for col in dateCols:
@@ -161,7 +183,7 @@ def generateCOVIDdatabase(seqDataPath:str, patientDataDir: str, dbPath: str, cap
 
     Path(output).mkdir(parents=True, exist_ok=True)
     mdataOut = os.path.join(output,"metadata.tsv")
-    mdata = collateCOVIDdata(seqData = seqData, patientData = patientData, matchCol = "Accession")
+    mdata = collateCOVIDdata(seqData = seqData, patientData = patientData, matchCol = "accession")
     mdata = convertDates(mdata)
     print("\nGenerating metadata.tsv...")
     mdata.to_csv(mdataOut, sep="\t", index=False)
