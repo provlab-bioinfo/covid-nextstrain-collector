@@ -42,6 +42,13 @@ def getPatientMetadata(patientDataDir:str, cols: dict, verbose = True):
     metadata = pd.concat(metadata, ignore_index=True)
     metadata = metadata.rename(columns = cols)
     metadata = metadata[metadata.columns.intersection(list(cols.values()))]
+
+    if 'age' in metadata.columns:
+        bins = [0,20,40,60,80,100,1000]
+        labels = ['0-20','20-40','40-60','60-80','80-100','100+']
+        metadata['age'] = pd.to_numeric(metadata['age'],errors='coerce')
+        metadata['age'] = pd.cut(metadata['age'], bins=bins, labels=labels, right=False)
+
     return metadata
 
 def getSeqData(seqDataPath:str, dbPath: str, cols: dict, onlyQCpass:bool = True, verbose = True):
